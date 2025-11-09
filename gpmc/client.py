@@ -558,24 +558,17 @@ class Client:
 
         context = (show_progress and Live(progress)) or nullcontext()
 
+        # Always update cache to ensure we have the latest albums
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.logger.debug("Updating cache to fetch latest albums...")
+        self.update_cache(show_progress=False)
+
         with context:
             for i in range(0, len(media_keys), album_limit):
                 album_batch = media_keys[i : i + album_limit]
                 # Add a suffix if media_keys will not fit into a single album
                 current_album_name = f"{album_name} {album_counter}" if len(media_keys) > album_limit else album_name
                 current_album_key = None
-                
-                # Check if cache is initialized and update if needed
-                self.cache_dir.mkdir(parents=True, exist_ok=True)
-                with Storage(self.db_path) as storage:
-                    init_state = storage.get_init_state()
-                
-                if not init_state:
-                    self.logger.warning(
-                        f"Local cache not initialized. Running update_cache() to fetch existing albums..."
-                    )
-                    # Initialize cache before checking for albums
-                    self.update_cache(show_progress=False)
                 
                 # Now check if an album with this name already exists in the cache
                 with Storage(self.db_path) as storage:
