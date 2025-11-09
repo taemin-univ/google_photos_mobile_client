@@ -645,10 +645,6 @@ class Client:
         response = self.api.get_library_state(state_token)
         next_state_token, next_page_token, remote_media, collections, media_keys_to_delete, collection_keys_to_delete = parse_db_update(response)
 
-        # Log deletion information for debugging
-        if collection_keys_to_delete:
-            self.logger.info(f"Deleting {len(collection_keys_to_delete)} collection(s): {collection_keys_to_delete[:5]}")  # Show first 5
-        
         with Storage(self.db_path) as storage:
             storage.update_state_tokens(next_state_token, next_page_token)
             storage.update(remote_media)

@@ -100,37 +100,32 @@ def _parse_deletion_item(d: dict) -> tuple[int, str | None]:
     try:
         deletion_type = d["1"]["1"]
         
-        # Log all non-type-1 deletions to help debug
-        if deletion_type != 1:
-            logging.info(f"Deletion type {deletion_type} found, full structure: {d}")
-        
         if deletion_type == 1:
             # Type 1 - media item deletion
-            # Media deletions have path d["1"]["2"]["1"]
             if "2" in d["1"] and "1" in d["1"]["2"]:
                 return (1, d["1"]["2"]["1"])
             else:
-                logging.warning(f"Type 1 deletion with unexpected structure: {d}")
+                logging.warning(f"Type 1 deletion with unexpected structure")
         elif deletion_type == 2:
             # Type 2 - collection deletion (uses collection_media_key)
             if "3" in d["1"] and "1" in d["1"]["3"]:
                 return (2, d["1"]["3"]["1"])
-            logging.warning(f"Type 2 deletion with unexpected structure: {d}")
+            logging.warning(f"Type 2 deletion with unexpected structure")
         elif deletion_type == 4:
-            # Collection deletion (type 4) - likely uses album_id
+            # Collection deletion (type 4)
             if "5" in d["1"] and "2" in d["1"]["5"]:
                 return (4, d["1"]["5"]["2"])
-            logging.warning(f"Type 4 deletion with unexpected structure: {d}")
+            logging.warning(f"Type 4 deletion with unexpected structure")
         elif deletion_type == 6:
-            # Collection deletion (type 6) - likely uses media_key
+            # Collection deletion (type 6)
             if "7" in d["1"] and "1" in d["1"]["7"]:
                 return (6, d["1"]["7"]["1"])
-            logging.warning(f"Type 6 deletion with unexpected structure: {d}")
+            logging.warning(f"Type 6 deletion with unexpected structure")
         else:
-            logging.info(f"Unknown deletion type {deletion_type}: {d}")
+            logging.warning(f"Unknown deletion type {deletion_type}")
             
     except Exception as e:
-        logging.error(f"Error parsing deletion item: {e}, data: {d}")
+        logging.error(f"Error parsing deletion item: {e}")
     
     return (0, None)
 
