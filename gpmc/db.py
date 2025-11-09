@@ -169,6 +169,58 @@ class Storage:
         with self.conn:
             self.conn.execute(sql, media_keys)
 
+    def get_collections(self, limit: int | None = None) -> list[CollectionItem]:
+        """
+        Retrieve collections (albums) from the database.
+
+        Args:
+            limit: Optional limit on the number of collections to retrieve.
+                  If None, retrieves all collections.
+
+        Returns:
+            list[CollectionItem]: List of CollectionItem objects from the database.
+        """
+        sql = "SELECT * FROM collections ORDER BY last_activity_time_ms DESC"
+        if limit:
+            sql += f" LIMIT {limit}"
+
+        cursor = self.conn.execute(sql)
+        columns = [description[0] for description in cursor.description]
+        
+        collections = []
+        for row in cursor.fetchall():
+            row_dict = dict(zip(columns, row))
+            # Convert integer boolean fields back to boolean
+            row_dict['is_custom_ordered'] = bool(row_dict['is_custom_ordered'])
+            collections.append(CollectionItem(**row_dict))
+        
+        return collections
+
+    def get_collection_by_id(self, collection_media_key: str) -> CollectionItem | None:
+        """
+        Retrieve a specific collection by its media key.
+
+        Args:
+            collection_media_key: The unique media key of the collection.
+
+        Returns:
+            CollectionItem | None: The collection if found, otherwise None.
+        """
+        cursor = self.conn.execute(
+            "SELECT * FROM collections WHERE collection_media_key = ?",
+            (collection_media_key,)
+        )
+        columns = [description[0] for description in cursor.description]
+        row = cursor.fetchone()
+        
+        if row:
+            row_dict = dict(zip(columns, row))
+            # Convert integer boolean fields back to boolean
+            row_dict['is_custom_ordered'] = bool(row_dict['is_custom_ordered'])
+            return CollectionItem(**row_dict)
+        
+        return None
+
     def get_state_tokens(self) -> tuple[str, str]:
         """
         Get both state tokens as a tuple (state_token, page_token).
