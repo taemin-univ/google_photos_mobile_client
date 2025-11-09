@@ -221,31 +221,6 @@ class Storage:
         
         return None
 
-    def get_collection_by_title(self, title: str) -> CollectionItem | None:
-        """
-        Retrieve a specific collection by its title.
-
-        Args:
-            title: The title of the collection to search for.
-
-        Returns:
-            CollectionItem | None: The collection if found, otherwise None.
-        """
-        cursor = self.conn.execute(
-            "SELECT * FROM collections WHERE title = ? ORDER BY last_activity_time_ms DESC LIMIT 1",
-            (title,)
-        )
-        columns = [description[0] for description in cursor.description]
-        row = cursor.fetchone()
-        
-        if row:
-            row_dict = dict(zip(columns, row))
-            # Convert integer boolean fields back to boolean
-            row_dict['is_custom_ordered'] = bool(row_dict['is_custom_ordered'])
-            return CollectionItem(**row_dict)
-        
-        return None
-
     def get_state_tokens(self) -> tuple[str, str]:
         """
         Get both state tokens as a tuple (state_token, page_token).
