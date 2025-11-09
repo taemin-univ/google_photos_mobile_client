@@ -3,7 +3,7 @@ from typing import Iterable, Self, Sequence
 from dataclasses import asdict
 from pathlib import Path
 
-from .models import MediaItem
+from .models import MediaItem, CollectionItem
 
 
 class Storage:
@@ -18,7 +18,7 @@ class Storage:
         self.conn.close()
 
     def _create_tables(self) -> None:
-        """Create the remote_media table if it doesn't exist."""
+        """Create the remote_media and collections tables if they don't exist."""
         self.conn.execute("""
         CREATE TABLE IF NOT EXISTS remote_media (
             media_key TEXT PRIMARY KEY,
@@ -65,6 +65,22 @@ class Storage:
         """)
 
         self.conn.execute("""
+        CREATE TABLE IF NOT EXISTS collections (
+            collection_media_key TEXT PRIMARY KEY,
+            collection_album_id TEXT,
+            title TEXT,
+            total_items INTEGER,
+            type INTEGER,
+            sort_order INTEGER,
+            is_custom_ordered INTEGER,
+            cover_item_media_key TEXT,
+            start INTEGER,
+            end INTEGER,
+            last_activity_time_ms INTEGER
+        )
+        """)
+
+        self.conn.execute("""
         CREATE TABLE IF NOT EXISTS state (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             state_token TEXT,
@@ -97,6 +113,33 @@ class Storage:
         INSERT INTO remote_media ({columns_str})
         VALUES ({placeholders})
         ON CONFLICT(media_key) DO UPDATE SET {updates}
+        """
+
+        # Prepare the values for each item
+        values = [tuple(item[col] for col in columns) for item in items_dicts]
+
+        # Execute in a transaction
+        with self.conn:
+            self.conn.executemany(sql, values)
+
+    def update_collections(self, items: Iterable[CollectionItem]) -> None:
+        """Insert or update multiple CollectionItems in the database."""
+        if not items:
+            return
+
+        # Convert dataclass objects to dictionaries
+        items_dicts = [asdict(item) for item in items]
+
+        # Prepare the SQL statement with all fields
+        columns = items_dicts[0].keys()
+        placeholders = ", ".join("?" * len(columns))
+        columns_str = ", ".join(columns)
+        updates = ", ".join(f"{col}=excluded.{col}" for col in columns if col != "collection_media_key")
+
+        sql = f"""
+        INSERT INTO collections ({columns_str})
+        VALUES ({placeholders})
+        ON CONFLICT(collection_media_key) DO UPDATE SET {updates}
         """
 
         # Prepare the values for each item

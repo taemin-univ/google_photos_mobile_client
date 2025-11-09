@@ -1,6 +1,6 @@
 import base64
 
-from .models import MediaItem
+from .models import MediaItem, CollectionItem
 from .utils import int64_to_float, int32_to_float, fixed32_to_float, urlsafe_base64
 
 
@@ -96,21 +96,21 @@ def _parse_deletion_item(d: dict) -> str | None:
     #     return d["1"]["7"]["1"]
 
 
-# def _parse_collection_item(d: dict) -> CollectionItem:
-#     """Parse a single collection item from the raw data."""
-#     return CollectionItem(
-#         collection_media_key=d["1"],
-#         collection_album_id=d["4"]["2"]["3"],
-#         cover_item_media_key=d["2"].get("17", {}).get("1"),
-#         start=d["2"]["10"]["6"]["1"],
-#         end=d["2"]["10"]["7"]["1"],
-#         last_activity_time_ms=d["2"]["10"]["10"],
-#         title=d["2"]["5"],
-#         total_items=d["2"]["7"],
-#         type=d["2"]["8"],
-#         sort_order=d["19"]["1"],
-#         is_custom_ordered=d["19"]["2"] == 1,
-#     )
+def _parse_collection_item(d: dict) -> CollectionItem:
+    """Parse a single collection item from the raw data."""
+    return CollectionItem(
+        collection_media_key=d["1"],
+        collection_album_id=d["4"]["2"]["3"],
+        cover_item_media_key=d["2"].get("17", {}).get("1"),
+        start=d["2"]["10"]["6"]["1"],
+        end=d["2"]["10"]["7"]["1"],
+        last_activity_time_ms=d["2"]["10"]["10"],
+        title=d["2"]["5"],
+        total_items=d["2"]["7"],
+        type=d["2"]["8"],
+        sort_order=d["19"]["1"],
+        is_custom_ordered=d["19"]["2"] == 1,
+    )
 
 
 # def _parse_envelope_item(d: dict) -> EnvelopeItem:
@@ -124,27 +124,30 @@ def _get_items_list(data: dict, key: str) -> list[dict]:
     return [items] if isinstance(items, dict) else items
 
 
-def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[str]]:
+def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[CollectionItem], list[str]]:
     """Parse the library state from the raw data."""
     next_page_token = data["1"].get("1", "")
     state_token = data["1"].get("6", "")
 
-    # Parse media item
+    # Parse media items
     remote_media = []
     media_items = _get_items_list(data, "2")
     remote_media.extend(_parse_media_item(d) for d in media_items)
 
+    # Parse collections (albums)
+    collections = []
+    collection_items = _get_items_list(data, "3")
+    collections.extend(_parse_collection_item(d) for d in collection_items)
+
+    # Parse deletions
     media_keys_to_delete = []
     deletions = _get_items_list(data, "9")
     for d in deletions:
         if media_key := _parse_deletion_item(d):
             media_keys_to_delete.append(media_key)
 
-    # collections = _get_items_list(data, "3")
-    # remote_media.extend(_parse_collection_item(d) for d in collections)
-
     # envelopes = _get_items_list(data, "12")
     # for d in envelopes:
     #     _parse_envelope_item(d)
 
-    return state_token, next_page_token, remote_media, media_keys_to_delete
+    return state_token, next_page_token, remote_media, collections, media_keys_to_delete
