@@ -159,6 +159,49 @@ class TestCollectionDeletion(unittest.TestCase):
             self.assertEqual(len(collections), 1)
             self.assertEqual(collections[0].collection_media_key, 'key_1')
 
+    def test_delete_collections_by_album_id(self):
+        """Test deleting collections by album_id instead of media_key."""
+        # Create test collections
+        collection1 = CollectionItem(
+            collection_media_key='media_key_1',
+            collection_album_id='album_id_1',
+            title='Album 1',
+            total_items=5,
+            type=1,
+            sort_order=0,
+            is_custom_ordered=False
+        )
+        
+        collection2 = CollectionItem(
+            collection_media_key='media_key_2',
+            collection_album_id='album_id_2',
+            title='Album 2',
+            total_items=10,
+            type=1,
+            sort_order=0,
+            is_custom_ordered=False
+        )
+
+        # Insert collections
+        with Storage(self.db_path) as storage:
+            storage.update_collections([collection1, collection2])
+
+        # Verify both exist
+        with Storage(self.db_path) as storage:
+            collections = storage.get_collections()
+            self.assertEqual(len(collections), 2)
+
+        # Delete one collection by album_id
+        with Storage(self.db_path) as storage:
+            storage.delete_collections(['album_id_1'])
+
+        # Verify only one remains
+        with Storage(self.db_path) as storage:
+            collections = storage.get_collections()
+            self.assertEqual(len(collections), 1)
+            self.assertEqual(collections[0].collection_media_key, 'media_key_2')
+            self.assertEqual(collections[0].collection_album_id, 'album_id_2')
+
 
 if __name__ == '__main__':
     unittest.main()

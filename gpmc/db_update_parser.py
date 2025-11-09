@@ -91,18 +91,50 @@ def _parse_deletion_item(d: dict) -> tuple[int, str | None]:
     Returns:
         tuple[int, str | None]: (deletion_type, item_key)
             - type 1: media item deletion
-            - type 4 or 6: collection (album) deletion
+            - type 4: collection deletion (variant 1)
+            - type 6: collection deletion (variant 2)
     """
-    deletion_type = d["1"]["1"]
-    if deletion_type == 1:
-        # Media item deletion
-        return (1, d["1"]["2"]["1"])
-    elif deletion_type == 4:
-        # Collection deletion (type 4)
-        return (4, d["1"]["5"]["2"])
-    elif deletion_type == 6:
-        # Collection deletion (type 6)
-        return (6, d["1"]["7"]["1"])
+    import logging
+    
+    try:
+        deletion_type = d["1"]["1"]
+        
+        # Log all non-type-1 deletions to help debug
+        if deletion_type != 1:
+            logging.info(f"Deletion type {deletion_type} found, full structure: {d}")
+        
+        if deletion_type == 1:
+            # Type 1 can be media OR collection deletion
+            # Media deletions have path d["1"]["2"]["1"]
+            if "2" in d["1"] and "1" in d["1"]["2"]:
+                return (1, d["1"]["2"]["1"])
+            # Check if it might be a collection with type 1
+            elif "5" in d["1"]:
+                logging.info(f"Type 1 deletion with field '5' (possible collection): {d}")
+                if "2" in d["1"]["5"]:
+                    return (4, d["1"]["5"]["2"])
+            elif "7" in d["1"]:
+                logging.info(f"Type 1 deletion with field '7' (possible collection): {d}")
+                if "1" in d["1"]["7"]:
+                    return (6, d["1"]["7"]["1"])
+            else:
+                logging.warning(f"Type 1 deletion with unexpected structure: {d}")
+        elif deletion_type == 4:
+            # Collection deletion (type 4) - likely uses album_id
+            if "5" in d["1"] and "2" in d["1"]["5"]:
+                return (4, d["1"]["5"]["2"])
+            logging.warning(f"Type 4 deletion with unexpected structure: {d}")
+        elif deletion_type == 6:
+            # Collection deletion (type 6) - likely uses media_key
+            if "7" in d["1"] and "1" in d["1"]["7"]:
+                return (6, d["1"]["7"]["1"])
+            logging.warning(f"Type 6 deletion with unexpected structure: {d}")
+        else:
+            logging.info(f"Unknown deletion type {deletion_type}: {d}")
+            
+    except Exception as e:
+        logging.error(f"Error parsing deletion item: {e}, data: {d}")
+    
     return (0, None)
 
 

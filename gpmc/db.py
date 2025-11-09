@@ -171,22 +171,23 @@ class Storage:
 
     def delete_collections(self, collection_keys: Sequence[str]) -> None:
         """
-        Delete multiple collections by their collection_media_key.
+        Delete multiple collections by their collection_media_key or collection_album_id.
 
         Args:
-            collection_keys: A sequence of collection_media_key values to delete
+            collection_keys: A sequence of collection_media_key or collection_album_id values to delete
         """
         if not collection_keys:
             return
 
         sql = """
         DELETE FROM collections
-        WHERE collection_media_key IN ({})
-        """.format(",".join(["?"] * len(collection_keys)))
+        WHERE collection_media_key IN ({placeholders})
+           OR collection_album_id IN ({placeholders})
+        """.format(placeholders=",".join(["?"] * len(collection_keys)))
 
-        # Execute in a transaction
+        # Execute in a transaction - duplicate the keys list for both IN clauses
         with self.conn:
-            self.conn.execute(sql, collection_keys)
+            self.conn.execute(sql, collection_keys + collection_keys)
 
     def get_collections(self, limit: int | None = None) -> list[CollectionItem]:
         """
