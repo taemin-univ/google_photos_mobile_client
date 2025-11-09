@@ -641,19 +641,20 @@ class Client:
         with Storage(self.db_path) as storage:
             state_token, _ = storage.get_state_tokens()
         response = self.api.get_library_state(state_token)
-        next_state_token, next_page_token, remote_media, collections, media_keys_to_delete = parse_db_update(response)
+        next_state_token, next_page_token, remote_media, collections, media_keys_to_delete, collection_keys_to_delete = parse_db_update(response)
 
         with Storage(self.db_path) as storage:
             storage.update_state_tokens(next_state_token, next_page_token)
             storage.update(remote_media)
             storage.update_collections(collections)
             storage.delete(media_keys_to_delete)
+            storage.delete_collections(collection_keys_to_delete)
 
         task = progress.tasks[int(task_id)]
         progress.update(
             task_id,
             updated=task.fields["updated"] + len(remote_media),
-            deleted=task.fields["deleted"] + len(media_keys_to_delete),
+            deleted=task.fields["deleted"] + len(media_keys_to_delete) + len(collection_keys_to_delete),
         )
 
         if next_page_token:
@@ -667,7 +668,7 @@ class Client:
             self._process_pages_init(progress, task_id, next_page_token)
 
         response = self.api.get_library_state(state_token)
-        state_token, next_page_token, remote_media, collections, _ = parse_db_update(response)
+        state_token, next_page_token, remote_media, collections, _, _ = parse_db_update(response)
 
         with Storage(self.db_path) as storage:
             storage.update_state_tokens(state_token, next_page_token)
@@ -695,19 +696,20 @@ class Client:
         next_page_token: str | None = page_token
         while True:
             response = self.api.get_library_page_init(next_page_token)
-            _, next_page_token, remote_media, collections, media_keys_to_delete = parse_db_update(response)
+            _, next_page_token, remote_media, collections, media_keys_to_delete, collection_keys_to_delete = parse_db_update(response)
 
             with Storage(self.db_path) as storage:
                 storage.update_state_tokens(page_token=next_page_token)
                 storage.update(remote_media)
                 storage.update_collections(collections)
                 storage.delete(media_keys_to_delete)
+                storage.delete_collections(collection_keys_to_delete)
 
             task = progress.tasks[int(task_id)]
             progress.update(
                 task_id,
                 updated=task.fields["updated"] + len(remote_media),
-                deleted=task.fields["deleted"] + len(media_keys_to_delete),
+                deleted=task.fields["deleted"] + len(media_keys_to_delete) + len(collection_keys_to_delete),
             )
             if not next_page_token:
                 break
@@ -724,19 +726,20 @@ class Client:
         next_page_token: str | None = page_token
         while True:
             response = self.api.get_library_page(next_page_token, state_token)
-            _, next_page_token, remote_media, collections, media_keys_to_delete = parse_db_update(response)
+            _, next_page_token, remote_media, collections, media_keys_to_delete, collection_keys_to_delete = parse_db_update(response)
 
             with Storage(self.db_path) as storage:
                 storage.update_state_tokens(page_token=next_page_token)
                 storage.update(remote_media)
                 storage.update_collections(collections)
                 storage.delete(media_keys_to_delete)
+                storage.delete_collections(collection_keys_to_delete)
 
             task = progress.tasks[int(task_id)]
             progress.update(
                 task_id,
                 updated=task.fields["updated"] + len(remote_media),
-                deleted=task.fields["deleted"] + len(media_keys_to_delete),
+                deleted=task.fields["deleted"] + len(media_keys_to_delete) + len(collection_keys_to_delete),
             )
             if not next_page_token:
                 break

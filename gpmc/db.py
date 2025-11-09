@@ -151,7 +151,7 @@ class Storage:
 
     def delete(self, media_keys: Sequence[str]) -> None:
         """
-        Delete multiple rows by their media_key.
+        Delete multiple media items by their media_key.
 
         Args:
             media_keys: A sequence of media_key values to delete
@@ -168,6 +168,25 @@ class Storage:
         # Execute in a transaction
         with self.conn:
             self.conn.execute(sql, media_keys)
+
+    def delete_collections(self, collection_keys: Sequence[str]) -> None:
+        """
+        Delete multiple collections by their collection_media_key.
+
+        Args:
+            collection_keys: A sequence of collection_media_key values to delete
+        """
+        if not collection_keys:
+            return
+
+        sql = """
+        DELETE FROM collections
+        WHERE collection_media_key IN ({})
+        """.format(",".join(["?"] * len(collection_keys)))
+
+        # Execute in a transaction
+        with self.conn:
+            self.conn.execute(sql, collection_keys)
 
     def get_collections(self, limit: int | None = None) -> list[CollectionItem]:
         """

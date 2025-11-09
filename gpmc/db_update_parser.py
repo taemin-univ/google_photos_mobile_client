@@ -84,16 +84,26 @@ def _parse_media_item(d: dict) -> MediaItem:
     return item
 
 
-def _parse_deletion_item(d: dict) -> str | None:
-    """Parse a single deletion item from the raw data."""
-    type = d["1"]["1"]
-    if type == 1:
-        return d["1"]["2"]["1"]
-    return None
-    # if type == 4:
-    #     return d["1"]["5"]["2"]
-    # if type == 6:
-    #     return d["1"]["7"]["1"]
+def _parse_deletion_item(d: dict) -> tuple[int, str | None]:
+    """
+    Parse a single deletion item from the raw data.
+    
+    Returns:
+        tuple[int, str | None]: (deletion_type, item_key)
+            - type 1: media item deletion
+            - type 4 or 6: collection (album) deletion
+    """
+    deletion_type = d["1"]["1"]
+    if deletion_type == 1:
+        # Media item deletion
+        return (1, d["1"]["2"]["1"])
+    elif deletion_type == 4:
+        # Collection deletion (type 4)
+        return (4, d["1"]["5"]["2"])
+    elif deletion_type == 6:
+        # Collection deletion (type 6)
+        return (6, d["1"]["7"]["1"])
+    return (0, None)
 
 
 def _parse_collection_item(d: dict) -> CollectionItem:
@@ -124,8 +134,14 @@ def _get_items_list(data: dict, key: str) -> list[dict]:
     return [items] if isinstance(items, dict) else items
 
 
-def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[CollectionItem], list[str]]:
-    """Parse the library state from the raw data."""
+def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[CollectionItem], list[str], list[str]]:
+    """
+    Parse the library state from the raw data.
+    
+    Returns:
+        tuple: (state_token, next_page_token, remote_media, collections, 
+                media_keys_to_delete, collection_keys_to_delete)
+    """
     next_page_token = data["1"].get("1", "")
     state_token = data["1"].get("6", "")
 
@@ -155,15 +171,22 @@ def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[
             logging.warning(f"Failed to parse collection item (key: {collection_key}): {type(e).__name__}: {e}")
             continue
 
-    # Parse deletions
+    # Parse deletions (both media items and collections)
     media_keys_to_delete = []
+    collection_keys_to_delete = []
     deletions = _get_items_list(data, "9")
     for d in deletions:
-        if media_key := _parse_deletion_item(d):
-            media_keys_to_delete.append(media_key)
+        deletion_type, item_key = _parse_deletion_item(d)
+        if item_key:
+            if deletion_type == 1:
+                # Media item deletion
+                media_keys_to_delete.append(item_key)
+            elif deletion_type in (4, 6):
+                # Collection deletion
+                collection_keys_to_delete.append(item_key)
 
     # envelopes = _get_items_list(data, "12")
     # for d in envelopes:
     #     _parse_envelope_item(d)
 
-    return state_token, next_page_token, remote_media, collections, media_keys_to_delete
+    return state_token, next_page_token, remote_media, collections, media_keys_to_delete, collection_keys_to_delete
