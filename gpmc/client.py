@@ -520,9 +520,12 @@ class Client:
 
     def add_to_album(self, media_keys: Sequence[str], album_name: str, show_progress: bool) -> list[str]:
         """
-        Add media items to one or more albums with the given name. If an album with the same name already exists,
-        items will be added to that existing album. If the total number of items exceeds the album limit,
+        Add media items to one or more albums with the given name. If an album with the same name already exists
+        in the local cache, items will be added to that existing album. If the total number of items exceeds the album limit,
         additional albums with numbered suffixes are created. The first album will also have a suffix if there are multiple albums.
+
+        Note:
+            To reuse existing albums, ensure the local cache is up-to-date by running update_cache() before uploading.
 
         Args:
             media_keys: Media keys of the media items to be added to album.
@@ -563,11 +566,12 @@ class Client:
                 current_album_key = None
                 
                 # Check if an album with this name already exists in the cache
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
                 with Storage(self.db_path) as storage:
                     existing_collection = storage.get_collection_by_title(current_album_name)
                     if existing_collection:
                         current_album_key = existing_collection.collection_media_key
-                        self.logger.info(f"Found existing album '{current_album_name}', adding items to it.")
+                        self.logger.info(f"Found existing album '{current_album_name}' in cache, adding items to it.")
                 
                 for j in range(0, len(album_batch), batch_size):
                     batch = album_batch[j : j + batch_size]
