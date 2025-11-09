@@ -69,6 +69,33 @@ class TestAlbumReuseIntegration(unittest.TestCase):
             # The value might still be 0 due to transaction isolation
             # This is a potential issue
 
+    def test_sequential_storage_access(self):
+        """Test that sequential storage access sees updates correctly."""
+        # First, check cache is not initialized
+        with Storage(self.db_path) as storage:
+            init_state = storage.get_init_state()
+            self.assertFalse(init_state)
+        
+        # Simulate cache update - set init state and add collection
+        with Storage(self.db_path) as storage:
+            storage.set_init_state(1)
+            test_collection = CollectionItem(
+                collection_media_key='test_key',
+                collection_album_id='test_album',
+                title='Test Album',
+                total_items=5,
+                type=1,
+                sort_order=0,
+                is_custom_ordered=False
+            )
+            storage.update_collections([test_collection])
+        
+        # Now in a new storage connection, verify we can see the collection
+        with Storage(self.db_path) as storage:
+            result = storage.get_collection_by_title('Test Album')
+            self.assertIsNotNone(result)
+            self.assertEqual(result.collection_media_key, 'test_key')
+
 
 if __name__ == '__main__':
     unittest.main()
