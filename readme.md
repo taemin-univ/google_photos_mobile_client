@@ -104,14 +104,16 @@ The `--album` option supports smart album reuse. If an album with the specified 
 
 #### Using Album Reuse
 
-To enable album reuse, update your local cache before uploading:
+**First-time use**: The cache is automatically initialized on your first upload with an album name - no manual action needed.
+
+**Subsequent use**: If you create new albums in Google Photos (via web/mobile) after the cache has been initialized, update your local cache to recognize them:
 
 ```python
 from gpmc import Client
 
 client = Client(auth_data=auth_data)
 
-# Update cache to fetch existing albums from Google Photos
+# Update cache to fetch newly created albums from Google Photos
 client.update_cache(show_progress=True)
 
 # Upload to album - will reuse existing "Vacation 2023" if it exists
@@ -124,8 +126,7 @@ client.upload(
 
 **CLI Example:**
 ```bash
-# First, ensure you have the gpmc Python package installed
-# Then you can use Python to update cache:
+# Update cache to recognize albums created in Google Photos web/mobile
 python -c "from gpmc import Client; client = Client(); client.update_cache()"
 
 # Now upload to album - will reuse existing album if found
@@ -133,6 +134,7 @@ gpmc "/path/to/photos" --album "Vacation 2023" --progress
 ```
 
 **Behavior:**
+- **First upload**: Cache is automatically initialized - no manual update needed
 - If the album exists in cache → items are added to the existing album
 - If the album doesn't exist → a new album is created
 - Album matching is case-sensitive
