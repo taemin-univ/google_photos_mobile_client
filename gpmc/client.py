@@ -520,7 +520,8 @@ class Client:
 
     def add_to_album(self, media_keys: Sequence[str], album_name: str, show_progress: bool) -> list[str]:
         """
-        Add media items to one or more albums with the given name. If the total number of items exceeds the album limit,
+        Add media items to one or more albums with the given name. If an album with the same name already exists,
+        items will be added to that existing album. If the total number of items exceeds the album limit,
         additional albums with numbered suffixes are created. The first album will also have a suffix if there are multiple albums.
 
         Args:
@@ -560,15 +561,27 @@ class Client:
                 # Add a suffix if media_keys will not fit into a single album
                 current_album_name = f"{album_name} {album_counter}" if len(media_keys) > album_limit else album_name
                 current_album_key = None
+                
+                # Check if an album with this name already exists in the cache
+                with Storage(self.db_path) as storage:
+                    existing_collection = storage.get_collection_by_title(current_album_name)
+                    if existing_collection:
+                        current_album_key = existing_collection.collection_media_key
+                        self.logger.info(f"Found existing album '{current_album_name}', adding items to it.")
+                
                 for j in range(0, len(album_batch), batch_size):
                     batch = album_batch[j : j + batch_size]
                     if current_album_key is None:
                         # Create the album with the first batch
                         current_album_key = self.api.create_album(album_name=current_album_name, media_keys=batch)
                         album_keys.append(current_album_key)
+                        self.logger.info(f"Created new album '{current_album_name}'.")
                     else:
                         # Add to the existing album
                         self.api.add_media_to_album(album_media_key=current_album_key, media_keys=batch)
+                        # Add to album_keys only if we haven't already added it (i.e., we found an existing one)
+                        if current_album_key not in album_keys:
+                            album_keys.append(current_album_key)
                     progress.update(task, advance=len(batch))
                 album_counter += 1
         return album_keys
