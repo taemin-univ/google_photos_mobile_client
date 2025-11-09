@@ -138,7 +138,8 @@ def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[
         except Exception as e:
             # Log the error but continue parsing other items
             import logging
-            logging.warning(f"Failed to parse media item: {e}")
+            media_key = d.get("1", "unknown")
+            logging.warning(f"Failed to parse media item (key: {media_key}): {type(e).__name__}: {e}")
             continue
 
     # Parse collections (albums)
@@ -150,7 +151,8 @@ def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[
         except Exception as e:
             # Log the error but continue parsing other items
             import logging
-            logging.warning(f"Failed to parse collection item: {e}")
+            collection_key = d.get("1", "unknown")
+            logging.warning(f"Failed to parse collection item (key: {collection_key}): {type(e).__name__}: {e}")
             continue
 
     # Parse deletions
