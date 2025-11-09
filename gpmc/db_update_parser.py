@@ -100,16 +100,16 @@ def _parse_collection_item(d: dict) -> CollectionItem:
     """Parse a single collection item from the raw data."""
     return CollectionItem(
         collection_media_key=d["1"],
-        collection_album_id=d["4"]["2"]["3"],
-        cover_item_media_key=d["2"].get("17", {}).get("1"),
-        start=d["2"]["10"]["6"]["1"],
-        end=d["2"]["10"]["7"]["1"],
-        last_activity_time_ms=d["2"]["10"]["10"],
-        title=d["2"]["5"],
-        total_items=d["2"]["7"],
-        type=d["2"]["8"],
-        sort_order=d["19"]["1"],
-        is_custom_ordered=d["19"]["2"] == 1,
+        collection_album_id=d.get("4", {}).get("2", {}).get("3", ""),
+        cover_item_media_key=d.get("2", {}).get("17", {}).get("1"),
+        start=d.get("2", {}).get("10", {}).get("6", {}).get("1"),
+        end=d.get("2", {}).get("10", {}).get("7", {}).get("1"),
+        last_activity_time_ms=d.get("2", {}).get("10", {}).get("10"),
+        title=d.get("2", {}).get("5", "Untitled"),
+        total_items=d.get("2", {}).get("7", 0),
+        type=d.get("2", {}).get("8", 0),
+        sort_order=d.get("19", {}).get("1", 0),
+        is_custom_ordered=d.get("19", {}).get("2", 0) == 1,
     )
 
 
@@ -132,12 +132,26 @@ def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[
     # Parse media items
     remote_media = []
     media_items = _get_items_list(data, "2")
-    remote_media.extend(_parse_media_item(d) for d in media_items)
+    for d in media_items:
+        try:
+            remote_media.append(_parse_media_item(d))
+        except Exception as e:
+            # Log the error but continue parsing other items
+            import logging
+            logging.warning(f"Failed to parse media item: {e}")
+            continue
 
     # Parse collections (albums)
     collections = []
     collection_items = _get_items_list(data, "3")
-    collections.extend(_parse_collection_item(d) for d in collection_items)
+    for d in collection_items:
+        try:
+            collections.append(_parse_collection_item(d))
+        except Exception as e:
+            # Log the error but continue parsing other items
+            import logging
+            logging.warning(f"Failed to parse collection item: {e}")
+            continue
 
     # Parse deletions
     media_keys_to_delete = []
