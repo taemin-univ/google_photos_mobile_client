@@ -102,19 +102,16 @@ File Filter Options:
 
 The `--album` option supports smart album reuse. If an album with the specified name already exists in your Google Photos account, new items will be added to that existing album instead of creating a duplicate.
 
-#### Using Album Reuse
+#### How It Works
 
-To enable album reuse, update your local cache before uploading:
+The cache is **automatically updated** every time you upload with an album name. This ensures existing albums are always recognized and reused, with no manual cache management required.
 
 ```python
 from gpmc import Client
 
 client = Client(auth_data=auth_data)
 
-# Update cache to fetch existing albums from Google Photos
-client.update_cache(show_progress=True)
-
-# Upload to album - will reuse existing "Vacation 2023" if it exists
+# Simply upload - cache is automatically updated to find existing albums
 client.upload(
     target="/path/to/photos",
     album_name="Vacation 2023",
@@ -124,19 +121,23 @@ client.upload(
 
 **CLI Example:**
 ```bash
-# First, ensure you have the gpmc Python package installed
-# Then you can use Python to update cache:
-python -c "from gpmc import Client; client = Client(); client.update_cache()"
-
-# Now upload to album - will reuse existing album if found
+# Just upload - existing "Vacation 2023" album will be automatically detected and reused
 gpmc "/path/to/photos" --album "Vacation 2023" --progress
 ```
 
 **Behavior:**
-- If the album exists in cache → items are added to the existing album
+- Cache is automatically updated on every album upload (incremental, fast)
+- If the album exists → items are added to the existing album
 - If the album doesn't exist → a new album is created
 - Album matching is case-sensitive
 - Works with both custom album names and `--album AUTO` mode
+- No manual cache management needed
+
+**Manual Cache Update (Optional):**
+You can still manually update the cache if needed:
+```python
+client.update_cache(show_progress=True)
+```
 
 
 ## auth_data? Where Do I Get Mine?
