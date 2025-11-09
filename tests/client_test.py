@@ -99,6 +99,48 @@ class TestUpload(unittest.TestCase):
         else:
             print("No remote media with matching hash found.")
 
+    def test_get_collections(self):
+        """Test retrieving collections (albums) from local cache."""
+        from gpmc.db import Storage
+        
+        # First, update the cache to ensure we have collection data
+        print("\n=== Updating cache to fetch collections ===")
+        self.client.update_cache(show_progress=True)
+        
+        # Retrieve collections from the database
+        print("\n=== Retrieving collections from database ===")
+        with Storage(self.client.db_path) as storage:
+            # Get all collections
+            collections = storage.get_collections()
+            
+            if collections:
+                print(f"\nFound {len(collections)} collection(s):")
+                for i, collection in enumerate(collections[:5], 1):  # Show first 5
+                    print(f"\n{i}. {collection.title}")
+                    print(f"   - Collection Media Key: {collection.collection_media_key}")
+                    print(f"   - Album ID: {collection.collection_album_id}")
+                    print(f"   - Total Items: {collection.total_items}")
+                    print(f"   - Type: {collection.type}")
+                    print(f"   - Custom Ordered: {collection.is_custom_ordered}")
+                    if collection.cover_item_media_key:
+                        print(f"   - Cover Item: {collection.cover_item_media_key}")
+                
+                if len(collections) > 5:
+                    print(f"\n... and {len(collections) - 5} more collection(s)")
+                
+                # Test retrieving a specific collection
+                if collections:
+                    print("\n=== Testing get_collection_by_id ===")
+                    first_collection = collections[0]
+                    retrieved = storage.get_collection_by_id(first_collection.collection_media_key)
+                    if retrieved:
+                        print(f"✓ Successfully retrieved collection: {retrieved.title}")
+                    else:
+                        print("✗ Failed to retrieve collection by ID")
+            else:
+                print("No collections found in the database.")
+                print("This may be normal if you have no albums in your Google Photos.")
+
 
 if __name__ == "__main__":
     unittest.main()
