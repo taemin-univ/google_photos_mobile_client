@@ -28,6 +28,20 @@ class TestDeletionParser(unittest.TestCase):
         self.assertEqual(deletion_type, 1)
         self.assertEqual(item_key, "media_key_123")
 
+    def test_parse_deletion_type_2_collection(self):
+        """Test parsing type 2 deletion (collection - primary type)."""
+        deletion_data = {
+            "1": {
+                "1": 2,
+                "3": {
+                    "1": "AF1QipOCEYvRPm4EVgRVhQBeoJ1h4_AuIEb6H15ng_Mz"
+                }
+            }
+        }
+        deletion_type, item_key = _parse_deletion_item(deletion_data)
+        self.assertEqual(deletion_type, 2)
+        self.assertEqual(item_key, "AF1QipOCEYvRPm4EVgRVhQBeoJ1h4_AuIEb6H15ng_Mz")
+
     def test_parse_deletion_type_4_collection(self):
         """Test parsing type 4 deletion (collection)."""
         deletion_data = {

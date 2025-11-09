@@ -91,6 +91,7 @@ def _parse_deletion_item(d: dict) -> tuple[int, str | None]:
     Returns:
         tuple[int, str | None]: (deletion_type, item_key)
             - type 1: media item deletion
+            - type 2: collection deletion (primary type)
             - type 4: collection deletion (variant 1)
             - type 6: collection deletion (variant 2)
     """
@@ -104,21 +105,17 @@ def _parse_deletion_item(d: dict) -> tuple[int, str | None]:
             logging.info(f"Deletion type {deletion_type} found, full structure: {d}")
         
         if deletion_type == 1:
-            # Type 1 can be media OR collection deletion
+            # Type 1 - media item deletion
             # Media deletions have path d["1"]["2"]["1"]
             if "2" in d["1"] and "1" in d["1"]["2"]:
                 return (1, d["1"]["2"]["1"])
-            # Check if it might be a collection with type 1
-            elif "5" in d["1"]:
-                logging.info(f"Type 1 deletion with field '5' (possible collection): {d}")
-                if "2" in d["1"]["5"]:
-                    return (4, d["1"]["5"]["2"])
-            elif "7" in d["1"]:
-                logging.info(f"Type 1 deletion with field '7' (possible collection): {d}")
-                if "1" in d["1"]["7"]:
-                    return (6, d["1"]["7"]["1"])
             else:
                 logging.warning(f"Type 1 deletion with unexpected structure: {d}")
+        elif deletion_type == 2:
+            # Type 2 - collection deletion (uses collection_media_key)
+            if "3" in d["1"] and "1" in d["1"]["3"]:
+                return (2, d["1"]["3"]["1"])
+            logging.warning(f"Type 2 deletion with unexpected structure: {d}")
         elif deletion_type == 4:
             # Collection deletion (type 4) - likely uses album_id
             if "5" in d["1"] and "2" in d["1"]["5"]:
@@ -214,8 +211,8 @@ def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[
                 if deletion_type == 1:
                     # Media item deletion
                     media_keys_to_delete.append(item_key)
-                elif deletion_type in (4, 6):
-                    # Collection deletion
+                elif deletion_type in (2, 4, 6):
+                    # Collection deletion (type 2 is the primary collection deletion type)
                     collection_keys_to_delete.append(item_key)
         except Exception as e:
             # Log the error but continue parsing other deletions
