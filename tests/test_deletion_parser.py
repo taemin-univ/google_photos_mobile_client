@@ -1,6 +1,12 @@
 """
 Test for deletion item parsing functionality.
 """
+import sys
+from pathlib import Path
+
+# Add parent directory to path to allow direct execution
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import unittest
 from gpmc.db_update_parser import _parse_deletion_item
 

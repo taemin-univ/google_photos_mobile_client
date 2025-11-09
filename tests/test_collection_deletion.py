@@ -2,10 +2,15 @@
 Test for collection deletion functionality.
 This test verifies that deleted collections are properly removed from the cache.
 """
+import sys
+from pathlib import Path
+
+# Add parent directory to path to allow direct execution
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import unittest
 import tempfile
 import os
-from pathlib import Path
 from gpmc.db import Storage
 from gpmc.models import CollectionItem
 
