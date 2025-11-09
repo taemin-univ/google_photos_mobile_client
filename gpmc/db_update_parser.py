@@ -176,14 +176,20 @@ def parse_db_update(data: dict) -> tuple[str, str | None, list[MediaItem], list[
     collection_keys_to_delete = []
     deletions = _get_items_list(data, "9")
     for d in deletions:
-        deletion_type, item_key = _parse_deletion_item(d)
-        if item_key:
-            if deletion_type == 1:
-                # Media item deletion
-                media_keys_to_delete.append(item_key)
-            elif deletion_type in (4, 6):
-                # Collection deletion
-                collection_keys_to_delete.append(item_key)
+        try:
+            deletion_type, item_key = _parse_deletion_item(d)
+            if item_key:
+                if deletion_type == 1:
+                    # Media item deletion
+                    media_keys_to_delete.append(item_key)
+                elif deletion_type in (4, 6):
+                    # Collection deletion
+                    collection_keys_to_delete.append(item_key)
+        except Exception as e:
+            # Log the error but continue parsing other deletions
+            import logging
+            deletion_type_raw = d.get("1", {}).get("1", "unknown")
+            logging.warning(f"Failed to parse deletion item (type: {deletion_type_raw}): {type(e).__name__}: {e}")
 
     # envelopes = _get_items_list(data, "12")
     # for d in envelopes:

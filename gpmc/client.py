@@ -615,12 +615,14 @@ class Client:
             TextColumn("{task.description}"),
             SpinnerColumn(),
             "Updates: [green]{task.fields[updated]:>8}[/green]",
-            "Deletions: [red]{task.fields[deleted]:>8}[/red]",
+            "Media Deletions: [red]{task.fields[media_deleted]:>8}[/red]",
+            "Album Deletions: [yellow]{task.fields[collection_deleted]:>8}[/yellow]",
         )
         task_id = progress.add_task(
             "[bold magenta]Updating local cache[/bold magenta]:",
             updated=0,
-            deleted=0,
+            media_deleted=0,
+            collection_deleted=0,
         )
         context = (show_progress and Live(progress)) or nullcontext()
 
@@ -643,6 +645,10 @@ class Client:
         response = self.api.get_library_state(state_token)
         next_state_token, next_page_token, remote_media, collections, media_keys_to_delete, collection_keys_to_delete = parse_db_update(response)
 
+        # Log deletion information for debugging
+        if collection_keys_to_delete:
+            self.logger.info(f"Deleting {len(collection_keys_to_delete)} collection(s): {collection_keys_to_delete[:5]}")  # Show first 5
+        
         with Storage(self.db_path) as storage:
             storage.update_state_tokens(next_state_token, next_page_token)
             storage.update(remote_media)
@@ -654,7 +660,8 @@ class Client:
         progress.update(
             task_id,
             updated=task.fields["updated"] + len(remote_media),
-            deleted=task.fields["deleted"] + len(media_keys_to_delete) + len(collection_keys_to_delete),
+            media_deleted=task.fields["media_deleted"] + len(media_keys_to_delete),
+            collection_deleted=task.fields["collection_deleted"] + len(collection_keys_to_delete),
         )
 
         if next_page_token:
@@ -709,7 +716,8 @@ class Client:
             progress.update(
                 task_id,
                 updated=task.fields["updated"] + len(remote_media),
-                deleted=task.fields["deleted"] + len(media_keys_to_delete) + len(collection_keys_to_delete),
+                media_deleted=task.fields["media_deleted"] + len(media_keys_to_delete),
+                collection_deleted=task.fields["collection_deleted"] + len(collection_keys_to_delete),
             )
             if not next_page_token:
                 break
@@ -739,7 +747,8 @@ class Client:
             progress.update(
                 task_id,
                 updated=task.fields["updated"] + len(remote_media),
-                deleted=task.fields["deleted"] + len(media_keys_to_delete) + len(collection_keys_to_delete),
+                media_deleted=task.fields["media_deleted"] + len(media_keys_to_delete),
+                collection_deleted=task.fields["collection_deleted"] + len(collection_keys_to_delete),
             )
             if not next_page_token:
                 break
