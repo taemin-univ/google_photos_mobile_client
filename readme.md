@@ -15,6 +15,7 @@ Google Photos client based on reverse engineered mobile API.
 - Skips files already present in your account.
 - Upload individual files or entire directories, with optional recursive scanning.
 - Album creation based on directory structure or custom album name.
+- Smart album reuse: automatically adds items to existing albums with matching names.
 - Real-time progress tracking.
 - Configurable threads for faster uploads (default: 1).
 
@@ -96,6 +97,47 @@ File Filter Options:
   --ignore-case         Perform case-insensitive matching.
   --match-path          Check for matches in the path, not just the filename.
 ```
+
+### Album Management
+
+The `--album` option supports smart album reuse. If an album with the specified name already exists in your Google Photos account, new items will be added to that existing album instead of creating a duplicate.
+
+#### Using Album Reuse
+
+To enable album reuse, update your local cache before uploading:
+
+```python
+from gpmc import Client
+
+client = Client(auth_data=auth_data)
+
+# Update cache to fetch existing albums from Google Photos
+client.update_cache(show_progress=True)
+
+# Upload to album - will reuse existing "Vacation 2023" if it exists
+client.upload(
+    target="/path/to/photos",
+    album_name="Vacation 2023",
+    show_progress=True
+)
+```
+
+**CLI Example:**
+```bash
+# First, ensure you have the gpmc Python package installed
+# Then you can use Python to update cache:
+python -c "from gpmc import Client; client = Client(); client.update_cache()"
+
+# Now upload to album - will reuse existing album if found
+gpmc "/path/to/photos" --album "Vacation 2023" --progress
+```
+
+**Behavior:**
+- If the album exists in cache → items are added to the existing album
+- If the album doesn't exist → a new album is created
+- Album matching is case-sensitive
+- Works with both custom album names and `--album AUTO` mode
+
 
 ## auth_data? Where Do I Get Mine?
 
